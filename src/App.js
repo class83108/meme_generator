@@ -23,22 +23,32 @@ function App() {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
     async function fetchMemes() {
-      setMemeSearchLoading(true);
-      setMemes([]);
-      const memeResponse = await fetch(
-        `https://api.giphy.com/v1/gifs/search?api_key=${KEY}&q=${query}&limit=6&offset=${resultOffset}&rating=g&lang=en&bundle=messaging_non_clips`
-      );
-      const memeData = await memeResponse.json();
-      if (memeData.meta.status !== 200) {
+      try {
+        setMemeSearchLoading(true);
+        setMemes([]);
+        const memeResponse = await fetch(
+          `https://api.giphy.com/v1/gifs/search?api_key=${KEY}&q=${query}&limit=6&offset=${resultOffset}&rating=g&lang=en&bundle=messaging_non_clips`,
+          { signal: controller.signal }
+        );
+        const memeData = await memeResponse.json();
+        if (memeData.meta.status !== 200) {
+          setMemeSearchLoading(false);
+          return;
+        }
+        setMemes(memeData.data || []);
         setMemeSearchLoading(false);
-        return;
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error(error);
+          // setMemeSearchLoading(false);
+        }
       }
-      setMemes(memeData.data || []);
-      setMemeSearchLoading(false);
     }
     if (query.length < 3) return;
     fetchMemes();
+    return () => controller.abort();
   }, [query]);
 
   function handleOnChange(query) {
